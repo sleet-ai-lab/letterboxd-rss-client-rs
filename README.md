@@ -17,69 +17,17 @@ A fully typed Rust client for Letterboxd's public per-member RSS feeds. Letterbo
 
 ## Installation
 
-The crate is not published to crates.io yet, so depend on it straight from the
-GitHub repository:
-
 ```toml
 [dependencies]
 letterboxd-rss-client-rs = { git = "https://github.com/sleet-ai-lab/letterboxd-rss-client-rs" }
 ```
 
-Cargo pulls the default branch. To pin a specific commit, add a `rev`:
-
-```toml
-[dependencies]
-letterboxd-rss-client-rs = {
-    git = "https://github.com/sleet-ai-lab/letterboxd-rss-client-rs",
-    rev = "e653e48",
-}
-```
-
-You also need an async runtime. The client is async, so add `tokio`:
+The client is async, so you also need a runtime:
 
 ```toml
 [dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 ```
-
-A complete `Cargo.toml` for a small program that uses the client:
-
-```toml
-[package]
-name = "my-letterboxd-tool"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-letterboxd-rss-client-rs = { git = "https://github.com/sleet-ai-lab/letterboxd-rss-client-rs" }
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-```
-
-With that in place, this program works:
-
-```rust
-use letterboxd_rss_client_rs::LetterboxdClient;
-
-#[tokio::main]
-async fn main() {
-    let feed = LetterboxdClient::new()
-        .fetch_feed("jsiewert")
-        .await
-        .expect("the feed must load");
-
-    println!("{} items for {:?}", feed.items.len(), feed.member_name());
-}
-```
-
-```console
-$ cargo run
-100 items for "Josh Siewert"
-```
-
-The four binaries are also available from a GitHub dependency. They are not
-installed by the above, because a library dependency does not install
-binaries. To use them, either clone the repository and run `cargo install
---path .`, or depend on the crate and call the library directly.
 
 ## Usage
 
