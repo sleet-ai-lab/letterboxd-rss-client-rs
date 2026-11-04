@@ -34,6 +34,17 @@
 //! * [`parse`] holds the XML parsers, one function per file.
 //! * [`client`] holds the HTTP layer.
 //! * [`util`] holds small shared helpers.
+//!
+//! # Scope
+//!
+//! This crate covers the RSS feed only. Letterboxd's other member pages —
+//! the filmography, the paginated diary, the reviews, the lists and the
+//! watchlist — are ordinary HTML, and are not parsed here. The feed itself
+//! is a rolling window of roughly the 50 most recent diary entries plus
+//! recently updated lists, so a member's complete history needs those pages.
+//!
+//! The `/rss/` endpoint itself is not rate-limited, so clients do not need
+//! to pace their requests or implement backoff.
 
 #![deny(missing_docs)]
 #![warn(clippy::all)]

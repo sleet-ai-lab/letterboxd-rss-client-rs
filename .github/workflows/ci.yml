@@ -42,8 +42,8 @@ jobs:
   live:
     name: Live API
     runs-on: ubuntu-latest
-    # Letterboxd rate-limits, so this job runs on a schedule and on demand
-    # rather than on every push.
+    # The RSS endpoint is not rate-limited, so this job runs on a schedule and
+    # on demand rather than on every push, to keep the live traffic modest.
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v4

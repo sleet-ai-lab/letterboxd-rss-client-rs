@@ -161,7 +161,7 @@ Convenience methods: `visible_count()`, `total_count()` (visible films plus the 
 | `WatchedDate` | An ISO `YYYY-MM-DD` calendar date. Exposes `as_date()`, `year()`, `month()`, `day()` and `to_iso_string()`. |
 | `PublishedDate` | An RFC 2822 `pubDate` timestamp with the original UTC offset preserved. |
 | `TmdbId` | Either `TmdbId::Movie(u64)` or `TmdbId::Tv(u64)`. Exposes `value()` and `is_tv()`. |
-| `LetterboxdError` | The error type of the crate. `is_member_not_found()` reports both the `MemberNotFound` variant and a `404` status error. |
+| `LetterboxdError` | The error type of the crate. The client maps a `404` to the `MemberNotFound` variant, and `is_member_not_found()` reports it. |
 
 ## CLI
 
@@ -437,6 +437,23 @@ Points worth knowing about the format:
 - **Lists are truncated.** Letterboxd inlines at most ten films into the list description and appends a note of the form `...plus 86 more. View the full list on Letterboxd`. The parser reads that marker into `truncated_count`, so `total_count()` returns the full size of the list while `films` holds only the visible ones.
 - **There is no pagination.** The feed carries roughly the 50 most recent diary entries plus recently updated lists, and nothing more. Across the 16 captured feeds in `tests/fixtures/` no feed contains more than 50 diary entries, and the number of lists ranges from 0 to 50. A full diary therefore has to be scraped from the member's profile pages; the RSS feed is a rolling window.
 - **The member's display name lives in the title.** The channel title is always `Letterboxd - <display name>`, which is why `member_name()` strips the prefix rather than using the title verbatim.
+- **The RSS endpoint is not rate-limited.** Requests to `/<username>/rss/` are served without throttling, so a client can fetch many members' feeds without backoff or delays. Note that this applies to the feed path only: the plain profile page (`/<username>/`) and the site root return `403` for non-browser clients, while `/rss/` and the member sub-pages (`/films/`, `/diary/`, `/lists/`, `/reviews/`, `/watchlist/`) return `200`. Those sub-pages are ordinary HTML, not feeds, and this crate does not parse them.
+
+## What this crate does not cover
+
+The library is scoped to the RSS feed. It does not scrape Letterboxd's HTML pages, which is where the rest of a member's activity lives:
+
+| Route | Content | Supported |
+|---|---|---|
+| `/<username>/rss/` | RSS 2.0 feed | yes — the whole point of this crate |
+| `/<username>/films/` | HTML: the full filmography | no |
+| `/<username>/diary/` | HTML: diary entries, paginated | no |
+| `/<username>/reviews/` | HTML: written reviews | no |
+| `/<username>/lists/` | HTML: all curated lists | no |
+| `/<username>/watchlist/` | HTML: the watchlist | no |
+| `/<username>/` | HTML: the profile | no |
+
+This matters most for history. The feed is a rolling window of roughly the 50 most recent diary entries plus recently updated lists, so a member's complete diary cannot be obtained from the feed and would have to come from the paginated `/diary/` pages.
 
 ## Project layout
 
@@ -524,8 +541,8 @@ The live test is skipped by default so the suite does not depend on the network.
 
 ```console
 $ LETTERBOXD_LIVE_TESTS=1 cargo test --test live_api -- --nocapture
+missing member reported as: letterboxd member not found: zzz-not-a-real-letterboxd-user-9x8y7z
 jsiewert: 100 items, 50 diary entries, 49 rated, member "Josh Siewert"
-missing member reported as: unexpected http status 404 for https://letterboxd.com/zzz-not-a-real-letterboxd-user-9x8y7z/rss/
 ```
 
 ## License
