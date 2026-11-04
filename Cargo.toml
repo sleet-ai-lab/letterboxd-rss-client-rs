@@ -1,0 +1,61 @@
+[package]
+name = "letterboxd-rss-client-rs"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT OR Apache-2.0"
+description = "Fully typed Rust client for fetching and parsing Letterboxd RSS feeds"
+repository = "https://github.com/sleet-ai-lab/letterboxd-rss-client-rs"
+homepage = "https://github.com/sleet-ai-lab/letterboxd-rss-client-rs"
+keywords = ["letterboxd", "rss", "feed", "diary", "tmdb"]
+categories = ["api-bindings", "parser-implementations"]
+readme = "README.md"
+
+[lib]
+name = "letterboxd_rss_client_rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lbrss"
+path = "src/bin/lbrss.rs"
+
+[[bin]]
+name = "lbrss-summary"
+path = "src/bin/lbrss_summary.rs"
+
+[[bin]]
+name = "lbrss-lists"
+path = "src/bin/lbrss_lists.rs"
+
+[[bin]]
+name = "lbrss-diary"
+path = "src/bin/lbrss_diary.rs"
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "gzip",
+    "charset",
+    "http2",
+] }
+tokio = { version = "1", default-features = false, features = [
+    "rt-multi-thread",
+    "macros",
+    "time",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+time = { version = "0.3", features = ["parsing", "formatting", "macros"] }
+clap = { version = "4", features = ["derive"] }
+html-escape = "0.2"
+url = "2"
+quick-xml = "0.38"
+futures = "0.3"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
