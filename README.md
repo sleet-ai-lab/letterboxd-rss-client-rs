@@ -1,12 +1,12 @@
 # letterboxd-rss-client-rs
 
-A fully typed Rust client for Letterboxd's public per-member RSS feeds. Letterboxd publishes a feed for every member at `https://letterboxd.com/<username>/rss/`, and that feed multiplexes three different kinds of content — diary entries, curated lists and liked reviews — into a single RSS 2.0 channel, with the payload of each item buried in CDATA-wrapped HTML. This crate fetches that feed over HTTP, parses the XML, and exposes it as an owned, strongly typed data model with no borrowed lifetimes, no `String` soup and no manual HTML scraping. Every type in the model derives `Serialize` and `Deserialize`, so a parsed feed can be written straight to JSON, and the crate ships four CLI binaries for inspecting a member's activity from the shell.
+A fully typed Rust client for Letterboxd's public per-member RSS feeds. Letterboxd publishes a feed for every member at `https://letterboxd.com/<username>/rss/`, and that feed multiplexes two different kinds of content — diary entries and curated lists — into a single RSS 2.0 channel, with the payload of each item buried in CDATA-wrapped HTML. This crate fetches that feed over HTTP, parses the XML, and exposes it as an owned, strongly typed data model with no borrowed lifetimes, no `String` soup and no manual HTML scraping. Every type in the model derives `Serialize` and `Deserialize`, so a parsed feed can be written straight to JSON, and the crate ships four CLI binaries for inspecting a member's activity from the shell.
 
 ## Features
 
-- **Typed data model.** `LetterboxdFeed`, `DiaryEntry`, `LetterboxdList`, `LikedReview`, `Rating`, `WatchedDate` and `TmdbId` are all concrete Rust types with documented fields.
+- **Typed data model.** `LetterboxdFeed`, `DiaryEntry`, `LetterboxdList`, `Rating`, `WatchedDate` and `TmdbId` are all concrete Rust types with documented fields.
 - **Async client.** `LetterboxdClient` wraps `reqwest` with rustls, connection pooling, a configurable timeout and a descriptive default `User-Agent`.
-- **Three item kinds.** Diary entries, curated lists and liked reviews are recovered from the feed and distinguished by their GUID prefix.
+- **Two item kinds.** Diary entries and curated lists are recovered from the feed and distinguished by their GUID prefix.
 - **Half-star ratings.** Ratings are parsed into a `Rating` that is validated to lie on Letterboxd's `0.5..=5.0` half-star scale and can be rendered as star glyphs.
 - **Watch dates.** `letterboxd:watchedDate` is parsed into a `WatchedDate` wrapping a `time::Date`, with year/month/day accessors.
 - **Poster URLs.** The poster `<img>` is extracted out of the CDATA description body and exposed as `poster_url`.
@@ -95,15 +95,14 @@ println!("{} items", feed.items.len());
 | `atom_link` | `Option<String>` | The feed's self-referencing Atom link. |
 | `items` | `Vec<FeedItem>` | Every item in the feed, in document order. |
 
-The feed offers helper methods that filter by kind: `diary_entries()`, `lists()`, `liked_reviews()` and `count_of_kind(FeedItemKind)`. It also derives the member's identity from the channel metadata: `member_name()` strips the `Letterboxd - ` prefix from the title, and `member_username()` extracts the username from the link.
+The feed offers helper methods that filter by kind: `diary_entries()`, `lists()` and `count_of_kind(FeedItemKind)`. It also derives the member's identity from the channel metadata: `member_name()` strips the `Letterboxd - ` prefix from the title, and `member_username()` extracts the username from the link.
 
-`FeedItem` is an enum with three variants, and the concrete kind is recovered from the GUID prefix:
+`FeedItem` is an enum with two variants, and the concrete kind is recovered from the GUID prefix:
 
 | Variant | GUID prefix | Description |
 |---|---|---|
 | `FeedItem::Diary` | `letterboxd-watch-`, `letterboxd-review-` | A film the member watched, possibly with a review. |
 | `FeedItem::List` | `letterboxd-list-` | A curated list of films. |
-| `FeedItem::LikedReview` | `letterboxd-like-` | A review by another member that the feed owner liked. |
 
 Every variant exposes `guid()`, `title()` and `link()` accessors that return the raw text exactly as Letterboxd wrote it.
 
@@ -145,19 +144,6 @@ Convenience methods: `has_review()`, `is_rewatch()`, `display_title()` (falls ba
 
 Convenience methods: `visible_count()`, `total_count()` (visible films plus the truncated count) and `is_truncated()`. Each `ListFilm` carries a `title`, an optional `url` and a `position` starting at `1`.
 
-### LikedReview
-
-| Field | Type | Description |
-|---|---|---|
-| `guid` | `String` | The GUID, of the form `letterboxd-like-<id>`. |
-| `title` | `String` | The raw `<title>` text. |
-| `link` | `String` | The raw `<link>` URL. |
-| `pub_date` | `Option<String>` | The raw `<pubDate>` string. |
-| `author` | `Option<String>` | The review author's display name. |
-| `film` | `Option<FilmReference>` | The film the review is about: `title`, `year`, `url` and `tmdb_id`. |
-| `review_text` | `Option<String>` | The review body as plain text, when present. |
-| `review_html` | `Option<String>` | The review body as raw HTML, when present. |
-
 ### Supporting types
 
 | Type | Description |
@@ -194,7 +180,6 @@ Counts:
   Total items:   100
   Diary entries: 50
   Lists:         50
-  Liked reviews: 0
 
 Diary entries (5 shown):
   • Primetime (2026)  ★★★★½  watched 2026-11-03
@@ -225,9 +210,6 @@ Lists (5 shown):
       https://letterboxd.com/jsiewert/list/1988-top-ten/
   • Canada (10 films visible, 58 total)
       https://letterboxd.com/jsiewert/list/canada/
-
-Liked reviews (0 shown):
-  (none)
 ```
 
 ### `lbrss-summary` — statistics
@@ -250,7 +232,6 @@ Items:
   Total:          51
   Diary entries:  50
   Lists:          1
-  Liked reviews:  0
 
 Diary statistics:
   Films watched:  50
@@ -293,32 +274,36 @@ Prints each curated list with its description and the films that were inlined in
 | `--user-agent <USER_AGENT>` | — | Custom `User-Agent` header. |
 
 ```console
-$ lbrss-lists --limit 2 --films 4 maesnotebook
-Member:   maesnotebook
-Username: maesnotebook
-Lists:    7 (2 shown)
+$ lbrss-lists --limit 3 --films 3 jsiewert
+Member:   Josh Siewert
+Username: jsiewert
+Lists:    50 (3 shown)
 
-would sell my soul to star in
-  Link:        https://letterboxd.com/maesnotebook/list/would-sell-my-soul-to-star-in/
-  Description: female parts I simply could never refuse
-  Films:       96 total
+2026
+  Link:        https://letterboxd.com/jsiewert/list/2026/
+  Films:       35 total
 
-    1. Gone Girl
-    2. La La Land
-    3. Girl, Interrupted
-    4. The Hunger Games
-  (showing 4 of 10 inlined films)
+    1. Nirvanna the Band the Show the Movie
+    2. The Odyssey
+    3. Tony
+  (showing 3 of 10 inlined films)
 
-holy grail
-  Link:        https://letterboxd.com/maesnotebook/list/holy-grail/
-  Description: the core queens
-  Films:       97 total
+The Ten Greatest Films Ever Made
+  Link:        https://letterboxd.com/jsiewert/list/the-ten-greatest-films-ever-made/
+  Description: This is truly an impossible list, but JD Amato (on his "My Neighbour Totoro" episode of Blank Check) inspired me to attempt this. To be clear these aren't my 10 favourites, rather they are the 10 movi…
+  Films:       unknown total
 
-    1. Black Swan
-    2. The Notebook
-    3. Kill Bill: Vol. 1
-    4. La La Land
-  (showing 4 of 10 inlined films)
+    1. Taxi Driver
+    2. Shoah
+    3. The Godfather
+
+1981 Top Ten
+  Link:        https://letterboxd.com/jsiewert/list/1981-top-ten/
+  Films:       unknown total
+
+    1. Chariots of Fire
+    2. My Dinner with Andre
+    3. Raiders of the Lost Ark
 ```
 
 ### `lbrss-diary` — diary entries
@@ -336,40 +321,38 @@ Prints each watched film with its rating, watched date, review and links, with o
 | `--user-agent <USER_AGENT>` | — | Custom `User-Agent` header. |
 
 ```console
-$ lbrss-diary --limit 3 --min-rating 4 --with-reviews karsten
+$ lbrss-diary --limit 3 karsten
 Member:   Karsten
 Username: karsten
-Entries:  4 matching (3 shown)
+Entries:  50 matching (3 shown)
 
-The Odyssey
+You Can See Everything
   Year:    2026
+  Rating:  ★★★★★ (5)
+  Watched: 2026-10-31
+  Rewatch: no
+  Liked:   yes
+  Link:    https://letterboxd.com/karsten/film/you-can-see-everything/
+  Poster:  https://a.ltrbxd.com/resized/film-poster/1/6/2/9/4/4/3/1629443-you-can-see-everything-0-600-0-900-crop.jpg?v=84f6724d74
+
+Best in Show
+  Year:    2000
   Rating:  ★★★★ (4)
-  Watched: 2026-07-15
+  Watched: 2026-10-29
   Rewatch: no
   Liked:   yes
-  Link:    https://letterboxd.com/karsten/film/the-odyssey-2026/
-  Poster:  https://a.ltrbxd.com/resized/film-poster/1/2/5/5/3/9/4/1255394-the-odyssey-2026-0-600-0-900-crop.jpg?v=1eed046d0c
-  Review:  Really enjoyed it. Got more into it as it went along. Really liked this interpretation of the Trojan Horse. Happy to see Hamish Patel in such a prominent role. Didn't have the same highest as some other Nolan for me though. The feel of this is really similar to Oppenheimer. Personally I think Interstellar (emotional best) and Tenet (action best) are still the Nolan highs for me.
+  Link:    https://letterboxd.com/karsten/film/best-in-show/
+  Poster:  https://a.ltrbxd.com/resized/film-poster/4/3/6/0/1/43601-best-in-show-0-600-0-900-crop.jpg?v=9acd41f8dc
 
-Galaxy Quest
-  Year:    1999
-  Rating:  ★★★★½ (4.5)
-  Watched: 2026-05-06
+Primetime
+  Year:    2026
+  Rating:  ★★★ (3)
+  Watched: 2026-10-05
   Rewatch: no
-  Liked:   yes
-  Link:    https://letterboxd.com/karsten/film/galaxy-quest/
-  Poster:  https://a.ltrbxd.com/resized/film-poster/5/1/2/2/7/51227-galaxy-quest-0-600-0-900-crop.jpg?v=77947eabcc
-  Review:  Holds up. 2nd best movie where Sigourney Weaver talks to a space computer.
-
-28 Years Later
-  Year:    2025
-  Rating:  ★★★★½ (4.5)
-  Watched: 2025-07-09
-  Rewatch: no
-  Liked:   yes
-  Link:    https://letterboxd.com/karsten/film/28-years-later/
-  Poster:  https://a.ltrbxd.com/resized/film-poster/9/9/2/7/8/6/992786-28-years-later-0-600-0-900-crop.jpg?v=014e09c066
-  Review:  Some tonal whiplash and I wish it was just a fully standalone story within the world established by 28 Days Later but I really loved it. Enjoyed how all over the place it was stylistically and tonally. A lot of the same editing as the slasher portions of Sunshine (a positive).
+  Liked:   no
+  Link:    https://letterboxd.com/karsten/film/primetime-2026/
+  Poster:  https://a.ltrbxd.com/resized/film-poster/1/2/6/2/0/1/9/1262019-primetime-2026-0-600-0-900-crop.jpg?v=41640d6988
+  Review:  Really liked the visual style and enjoyed the cast/acting. I was just so skeezed out that I don’t feel like I necessarily enjoyed it. Excited for You Can See Everything.
 ```
 
 All four binaries support `--json`, which emits the parsed model rather than the text view:
@@ -420,14 +403,15 @@ Three namespace prefixes are in play:
 | `tmdb:` | `https://themoviedb.org` | `movieId` or `tvId`, depending on whether the film is a movie or a series. |
 | `dc:` | `http://purl.org/dc/elements/1.1/` | `creator`, which holds the member's display name. |
 
-The three kinds of item are multiplexed into the same channel and told apart by the `<guid>` prefix:
+The two kinds of item are multiplexed into the same channel and told apart by the `<guid>` prefix:
 
 | GUID prefix | Kind | Notes |
 |---|---|---|
 | `letterboxd-watch-` | Diary entry | A plain watch, with no review. |
 | `letterboxd-review-` | Diary entry | A watch with a written review. |
 | `letterboxd-list-` | Curated list | Carries the inlined film list. |
-| `letterboxd-like-` | Liked review | A review by another member that the feed owner liked. |
+
+Those are the only two kinds the feed contains. This was confirmed against the 16 real captured feeds in `tests/fixtures/`, which hold 960 items in total: 226 `letterboxd-watch-` GUIDs, 468 `letterboxd-review-` GUIDs and 266 `letterboxd-list-` GUIDs. No other prefix occurs in any of them.
 
 A diary entry item looks like this:
 
@@ -440,6 +424,7 @@ Points worth knowing about the format:
 - **The `<description>` is CDATA-wrapped HTML.** The item body is not a text field but a small HTML document. The first `<p>` usually holds only the poster `<img src="...">`, which is a resized CDN copy of the TMDB poster. Everything after it is the review prose.
 - **A plain watch has no review.** Its description says only `Watched on Sunday November 1, 2026.`, which the parser recognises as an automatic notice and does not report as a review. Only `letterboxd-review-` items carry real prose, and only they get a `review_text`.
 - **Lists are truncated.** Letterboxd inlines at most ten films into the list description and appends a note of the form `...plus 86 more. View the full list on Letterboxd`. The parser reads that marker into `truncated_count`, so `total_count()` returns the full size of the list while `films` holds only the visible ones.
+- **Liking a film is not a separate item.** A member liking a film they watched does not create a third kind of feed entry: it is the `letterboxd:memberLike` flag on the existing diary entry, exposed as `DiaryEntry::liked`. Toggling the like on Letterboxd just updates that same entry, so the feed still contains one item per watched film.
 - **There is no pagination.** The feed carries roughly the 50 most recent diary entries plus recently updated lists, and nothing more. Across the 16 captured feeds in `tests/fixtures/` no feed contains more than 50 diary entries, and the number of lists ranges from 0 to 50. A full diary therefore has to be scraped from the member's profile pages; the RSS feed is a rolling window.
 - **The member's display name lives in the title.** The channel title is always `Letterboxd - <display name>`, which is why `member_name()` strips the prefix rather than using the title verbatim.
 - **The RSS endpoint is not rate-limited.** Requests to `/<username>/rss/` are served without throttling, so a client can fetch many members' feeds without backoff or delays. Note that this applies to the feed path only: the plain profile page (`/<username>/`) and the site root return `403` for non-browser clients, while `/rss/` and the member sub-pages (`/films/`, `/diary/`, `/lists/`, `/reviews/`, `/watchlist/`) return `200`. Those sub-pages are ordinary HTML, not feeds, and this crate does not parse them.
@@ -492,10 +477,8 @@ src/
 │   ├── diary_entry.rs            # DiaryEntry
 │   ├── feed_item.rs              # FeedItem
 │   ├── feed_item_kind.rs         # FeedItemKind
-│   ├── film_reference.rs         # FilmReference
 │   ├── letterboxd_feed.rs        # LetterboxdFeed
 │   ├── letterboxd_list.rs        # LetterboxdList
-│   ├── liked_review.rs           # LikedReview
 │   ├── list_film.rs              # ListFilm
 │   ├── published_date.rs         # PublishedDate
 │   ├── rating.rs                 # Rating
@@ -538,7 +521,7 @@ The fixture test parses all 16 captures and checks the invariants that hold acro
 
 ```console
 $ cargo test --test parse_fixtures -- --nocapture
-parsed 16 fixtures: 960 items (694 diary, 266 lists, 2413 list films, 0 liked reviews)
+parsed 16 fixtures: 960 items (694 diary, 266 lists, 2413 list films)
   rated: 556, with review: 468, rewatches: 71, truncated lists: 161
 ```
 

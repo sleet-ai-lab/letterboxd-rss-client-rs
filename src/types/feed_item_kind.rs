@@ -1,8 +1,8 @@
-//! The three kinds of content Letterboxd puts in an RSS feed.
+//! The two kinds of content Letterboxd puts in an RSS feed.
 
 use serde::{Deserialize, Serialize};
 
-/// The three kinds of content Letterboxd puts in an RSS feed.
+/// The two kinds of content Letterboxd puts in an RSS feed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FeedItemKind {
@@ -10,17 +10,17 @@ pub enum FeedItemKind {
     Diary,
     /// A curated list of films.
     List,
-    /// A review that the member liked.
-    LikedReview,
 }
 
 impl FeedItemKind {
     /// Returns the GUID prefix Letterboxd uses for this kind.
+    ///
+    /// A diary entry uses either `letterboxd-watch` or `letterboxd-review`,
+    /// depending on whether the member wrote a review.
     pub fn guid_prefix(&self) -> &'static str {
         match self {
             FeedItemKind::Diary => "letterboxd-watch",
             FeedItemKind::List => "letterboxd-list",
-            FeedItemKind::LikedReview => "letterboxd-like",
         }
     }
 }

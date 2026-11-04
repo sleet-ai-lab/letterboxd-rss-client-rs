@@ -2,15 +2,14 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::types::{DiaryEntry, FeedItemKind, LetterboxdList, LikedReview};
+use crate::types::{DiaryEntry, FeedItemKind, LetterboxdList};
 
 /// A single item from a Letterboxd RSS feed.
 ///
-/// Letterboxd multiplexes three different kinds of content into one feed:
-/// diary entries, curated lists, and (for members who enable it) likes. The
-/// concrete kind is recovered from the `guid` prefix, which Letterboxd writes
-/// as `letterboxd-watch-<id>`, `letterboxd-review-<id>` or
-/// `letterboxd-list-<id>`.
+/// Letterboxd multiplexes two different kinds of content into one feed:
+/// diary entries and curated lists. The concrete kind is recovered from the
+/// `guid` prefix, which Letterboxd writes as `letterboxd-watch-<id>`,
+/// `letterboxd-review-<id>` or `letterboxd-list-<id>`.
 ///
 /// Use [`FeedItem::kind`] to branch on the variant without matching twice.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -20,8 +19,6 @@ pub enum FeedItem {
     Diary(DiaryEntry),
     /// A curated list of films.
     List(LetterboxdList),
-    /// A review the member liked.
-    LikedReview(LikedReview),
 }
 
 impl FeedItem {
@@ -30,7 +27,6 @@ impl FeedItem {
         match self {
             FeedItem::Diary(_) => FeedItemKind::Diary,
             FeedItem::List(_) => FeedItemKind::List,
-            FeedItem::LikedReview(_) => FeedItemKind::LikedReview,
         }
     }
 
@@ -39,7 +35,6 @@ impl FeedItem {
         match self {
             FeedItem::Diary(entry) => &entry.guid,
             FeedItem::List(list) => &list.guid,
-            FeedItem::LikedReview(review) => &review.guid,
         }
     }
 
@@ -48,7 +43,6 @@ impl FeedItem {
         match self {
             FeedItem::Diary(entry) => &entry.title,
             FeedItem::List(list) => &list.title,
-            FeedItem::LikedReview(review) => &review.title,
         }
     }
 
@@ -57,7 +51,6 @@ impl FeedItem {
         match self {
             FeedItem::Diary(entry) => &entry.link,
             FeedItem::List(list) => &list.link,
-            FeedItem::LikedReview(review) => &review.link,
         }
     }
 }

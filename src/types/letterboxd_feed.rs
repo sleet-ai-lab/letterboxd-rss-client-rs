@@ -7,9 +7,9 @@ use crate::types::{FeedItem, FeedItemKind};
 /// A parsed Letterboxd RSS feed.
 ///
 /// Letterboxd serves one feed per member at
-/// `https://letterboxd.com/<username>/rss/`. The feed mixes diary entries,
-/// curated lists and liked reviews, so [`LetterboxdFeed::items`] holds every
-/// item while the helper methods filter by kind.
+/// `https://letterboxd.com/<username>/rss/`. The feed mixes two kinds of
+/// content — diary entries and curated lists — so [`LetterboxdFeed::items`]
+/// holds every item while the helper methods filter by kind.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LetterboxdFeed {
     /// The channel title, for example `Letterboxd - Josh Siewert`.
@@ -56,17 +56,6 @@ impl LetterboxdFeed {
             .iter()
             .filter_map(|item| match item {
                 FeedItem::List(list) => Some(list),
-                _ => None,
-            })
-            .collect()
-    }
-
-    /// Returns only the liked reviews from the feed.
-    pub fn liked_reviews(&self) -> Vec<&crate::types::LikedReview> {
-        self.items
-            .iter()
-            .filter_map(|item| match item {
-                FeedItem::LikedReview(review) => Some(review),
                 _ => None,
             })
             .collect()

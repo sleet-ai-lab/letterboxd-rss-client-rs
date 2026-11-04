@@ -46,7 +46,6 @@ struct Summary {
     total_items: usize,
     diary_entries: usize,
     lists: usize,
-    liked_reviews: usize,
     rated_count: usize,
     with_review_count: usize,
     liked_count: usize,
@@ -135,7 +134,6 @@ fn build_summary(feed: &LetterboxdFeed) -> Summary {
         total_items: feed.items.len(),
         diary_entries: entries.len(),
         lists: feed.lists().len(),
-        liked_reviews: feed.liked_reviews().len(),
         rated_count,
         with_review_count,
         liked_count,
@@ -163,7 +161,6 @@ fn print_summary(summary: &Summary) {
     println!("  Total:          {}", summary.total_items);
     println!("  Diary entries:  {}", summary.diary_entries);
     println!("  Lists:          {}", summary.lists);
-    println!("  Liked reviews:  {}", summary.liked_reviews);
     println!();
 
     println!("Diary statistics:");

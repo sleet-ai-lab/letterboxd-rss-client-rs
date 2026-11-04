@@ -66,12 +66,6 @@ fn print_list(list: &LetterboxdList) {
     println!("      {}", list.link);
 }
 
-fn print_liked_review(review: &letterboxd_rss_client_rs::LikedReview) {
-    let author = review.author.as_deref().unwrap_or("unknown author");
-    println!("  • {} — by {}", review.title, author);
-    println!("      {}", review.link);
-}
-
 fn print_overview(feed: &LetterboxdFeed, limit: usize, show_reviews: bool) {
     println!("Member:   {}", feed.member_name());
     println!(
@@ -90,10 +84,6 @@ fn print_overview(feed: &LetterboxdFeed, limit: usize, show_reviews: bool) {
     println!(
         "  Lists:         {}",
         feed.count_of_kind(letterboxd_rss_client_rs::FeedItemKind::List)
-    );
-    println!(
-        "  Liked reviews: {}",
-        feed.count_of_kind(letterboxd_rss_client_rs::FeedItemKind::LikedReview)
     );
     println!();
 
@@ -114,16 +104,6 @@ fn print_overview(feed: &LetterboxdFeed, limit: usize, show_reviews: bool) {
     }
     for list in lists.iter().take(limit) {
         print_list(list);
-    }
-    println!();
-
-    let reviews = feed.liked_reviews();
-    println!("Liked reviews ({} shown):", reviews.len().min(limit));
-    if reviews.is_empty() {
-        println!("  (none)");
-    }
-    for review in reviews.iter().take(limit) {
-        print_liked_review(review);
     }
 }
 

@@ -7,10 +7,7 @@ use quick_xml::Reader;
 
 use crate::error::LetterboxdError;
 use crate::result::Result;
-use crate::types::{
-    DiaryEntry, FeedItem, FilmReference, LetterboxdList, LikedReview, ListFilm, Rating, TmdbId,
-    WatchedDate,
-};
+use crate::types::{DiaryEntry, FeedItem, LetterboxdList, ListFilm, Rating, TmdbId, WatchedDate};
 use crate::util::{collapse_whitespace, extract_poster_url, html_to_text};
 
 /// Parses a raw `<item>` XML fragment.
@@ -28,7 +25,8 @@ use crate::util::{collapse_whitespace, extract_poster_url, html_to_text};
 /// | `letterboxd-watch-`     | [`FeedItem::Diary`]            |
 /// | `letterboxd-review-`    | [`FeedItem::Diary`]            |
 /// | `letterboxd-list-`      | [`FeedItem::List`]             |
-/// | `letterboxd-like-`      | [`FeedItem::LikedReview`]      |
+///
+/// An item whose GUID carries any other prefix is skipped.
 ///
 /// # Errors
 ///
@@ -78,22 +76,6 @@ pub fn parse_item(raw: &str) -> Result<Option<FeedItem>> {
     if guid.starts_with("letterboxd-list-") {
         let list = build_list(guid, title, link, pub_date, author, description_html);
         return Ok(Some(FeedItem::List(list)));
-    }
-
-    if guid.starts_with("letterboxd-like-") {
-        let review = build_liked_review(
-            guid,
-            title,
-            link,
-            pub_date,
-            author,
-            description_html,
-            fields.get("filmTitle"),
-            fields.get("filmYear"),
-            fields.get("movieId"),
-            fields.get("tvId"),
-        );
-        return Ok(Some(FeedItem::LikedReview(review)));
     }
 
     Ok(None)
@@ -260,53 +242,6 @@ fn build_list(
         description_html: description_html.map(|html| html.trim().to_string()),
         films,
         truncated_count,
-    }
-}
-
-/// Builds a liked review from the parsed fields of a like item.
-#[allow(clippy::too_many_arguments)]
-fn build_liked_review(
-    guid: String,
-    title: String,
-    link: String,
-    pub_date: Option<String>,
-    author: Option<String>,
-    description_html: Option<String>,
-    film_title: Option<&String>,
-    film_year: Option<&String>,
-    movie_id: Option<&String>,
-    tv_id: Option<&String>,
-) -> LikedReview {
-    let prose = description_html
-        .as_deref()
-        .map(|html| review_prose(html, true))
-        .unwrap_or_default();
-
-    let review_text = if prose.is_empty() { None } else { Some(prose) };
-
-    // The raw description is kept as HTML whenever it carries review prose.
-    let review_html = if review_text.is_some() {
-        description_html.map(|html| html.trim().to_string())
-    } else {
-        None
-    };
-
-    let film = film_title.map(|value| FilmReference {
-        title: decode_entities(value.trim()),
-        year: film_year.and_then(|value| value.trim().parse::<i32>().ok()),
-        url: Some(link.clone()).filter(|url| !url.is_empty()),
-        tmdb_id: parse_tmdb_id(movie_id, tv_id),
-    });
-
-    LikedReview {
-        guid,
-        title,
-        link,
-        pub_date,
-        author,
-        film,
-        review_text,
-        review_html,
     }
 }
 
@@ -650,8 +585,6 @@ mod tests {
 
     const LIST_ITEM: &str = r#" <title>would sell my soul to star in</title> <link>https://letterboxd.com/maesnotebook/list/would-sell-my-soul-to-star-in/</link> <guid isPermaLink="false">letterboxd-list-42568585</guid> <pubDate>Tue, 6 Feb 2024 12:09:47 +1300</pubDate> <description><![CDATA[ <p>female parts I simply could never refuse</p> <ul> <li> <a href="https://letterboxd.com/film/gone-girl/">Gone Girl</a> </li> <li> <a href="https://letterboxd.com/film/la-la-land/">La La Land</a> </li> </ul> <p>...plus 86 more. <a href="https://letterboxd.com/maesnotebook/list/would-sell-my-soul-to-star-in/">View the full list on Letterboxd</a>.</p> ]]></description> <dc:creator>maesnotebook</dc:creator>"#;
 
-    const LIKE_ITEM: &str = r#" <title>Film Name, 2024 - ★★★★</title> <link>https://letterboxd.com/othermember/film/film-name/</link> <guid isPermaLink="false">letterboxd-like-123456</guid> <pubDate>Mon, 2 Nov 2026 07:37:59 +1300</pubDate> <letterboxd:filmTitle>Film Name</letterboxd:filmTitle> <letterboxd:filmYear>2024</letterboxd:filmYear> <letterboxd:memberRating>4.0</letterboxd:memberRating> <description><![CDATA[ <p><img src="https://a.ltrbxd.com/resized/sm/upload/poster.jpg?v=abc"/></p> <p>Really lovely film.</p> ]]></description> <dc:creator>Other Member</dc:creator>"#;
-
     #[test]
     fn parses_a_watch_item() {
         let item = parse_item(WATCH_ITEM)
@@ -750,30 +683,6 @@ mod tests {
         let description = list.description_text.expect("a description");
         assert!(description.contains("female parts I simply could never refuse"));
         assert!(!description.contains("plus 86 more"));
-    }
-
-    #[test]
-    fn parses_a_like_item() {
-        let item = parse_item(LIKE_ITEM)
-            .expect("valid xml")
-            .expect("known guid");
-        let FeedItem::LikedReview(review) = item else {
-            panic!("expected a liked review");
-        };
-
-        assert_eq!(review.guid, "letterboxd-like-123456");
-        assert_eq!(review.title, "Film Name, 2024 - ★★★★");
-        assert_eq!(review.author.as_deref(), Some("Other Member"));
-
-        let film = review.film.expect("a film reference");
-        assert_eq!(film.title, "Film Name");
-        assert_eq!(film.year, Some(2024));
-
-        let text = review.review_text.expect("a review");
-        assert!(text.contains("Really lovely film."));
-
-        let html = review.review_html.expect("the raw review html");
-        assert!(html.contains("<p>Really lovely film.</p>"));
     }
 
     #[test]

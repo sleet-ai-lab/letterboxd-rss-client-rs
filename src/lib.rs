@@ -1,9 +1,9 @@
 //! A fully typed client for Letterboxd's public RSS feeds.
 //!
 //! Letterboxd publishes a per-member RSS feed at
-//! `https://letterboxd.com/<username>/rss/`. The feed mixes three kinds of
-//! content — diary entries, curated lists and liked reviews — and this crate
-//! turns that XML into a typed, owned data model.
+//! `https://letterboxd.com/<username>/rss/`. The feed mixes two kinds of
+//! content — diary entries and curated lists — and this crate turns that XML
+//! into a typed, owned data model.
 //!
 //! # Example
 //!
@@ -61,7 +61,7 @@ pub use error::LetterboxdError;
 pub use parse::{parse_feed, parse_item};
 pub use result::Result;
 pub use types::{
-    DiaryEntry, FeedItem, FeedItemKind, FilmReference, LetterboxdFeed, LetterboxdList, LikedReview,
-    ListFilm, PublishedDate, Rating, TmdbId, WatchedDate,
+    DiaryEntry, FeedItem, FeedItemKind, LetterboxdFeed, LetterboxdList, ListFilm, PublishedDate,
+    Rating, TmdbId, WatchedDate,
 };
 pub use util::{collapse_whitespace, extract_poster_url, html_to_text};

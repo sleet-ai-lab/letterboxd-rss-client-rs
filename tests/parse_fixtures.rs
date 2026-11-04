@@ -150,12 +150,11 @@ fn every_fixture_parses_into_a_consistent_feed() {
     let mut total_items = 0usize;
     let mut total_diary = 0usize;
     let mut total_lists = 0usize;
-    let mut total_liked_reviews = 0usize;
+    let mut total_list_films = 0usize;
     let mut total_rated = 0usize;
     let mut total_with_review = 0usize;
     let mut total_rewatch = 0usize;
     let mut total_truncated_lists = 0usize;
-    let mut total_list_films = 0usize;
 
     let mut saw_review_text = false;
     let mut saw_five_star_rating = false;
@@ -215,9 +214,6 @@ fn every_fixture_parses_into_a_consistent_feed() {
                         total_truncated_lists += 1;
                     }
                 }
-                FeedItem::LikedReview(_) => {
-                    total_liked_reviews += 1;
-                }
             }
         }
 
@@ -267,13 +263,12 @@ fn every_fixture_parses_into_a_consistent_feed() {
     );
 
     println!(
-        "parsed {fixtures} fixtures: {items} items ({diary} diary, {lists} lists, {films} list films, {liked} liked reviews)",
+        "parsed {fixtures} fixtures: {items} items ({diary} diary, {lists} lists, {films} list films)",
         fixtures = paths.len(),
         items = total_items,
         diary = total_diary,
         lists = total_lists,
         films = total_list_films,
-        liked = total_liked_reviews,
     );
     println!(
         "  rated: {rated}, with review: {with_review}, rewatches: {rewatch}, truncated lists: {truncated}",
